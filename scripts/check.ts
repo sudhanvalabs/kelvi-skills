@@ -26,6 +26,9 @@ for (const s of SKILLS) {
   if (s.kit.split(".")[0] !== KIT_VERSION.split(".")[0]) fail(`${s.key} is built for toolkit ${s.kit}, not ${KIT_VERSION}`);
   if (!/^[a-z]+$/.test(s.menu.command)) fail(`${s.key}: the command must be lowercase letters`);
   if (s.menu.helpLine.length > 120) fail(`${s.key}: the help line is over 120 characters`);
+  if (s.page && (!s.page.icon || [...s.page.icon].length !== 1)) fail(`${s.key}: the sidebar icon must be one character`);
+  if (s.page && !s.page.path && !s.page.register) fail(`${s.key}: the sidebar entry needs a path or a register`);
+  if (s.page?.path) fail(`${s.key}: a skill outside Forge has no page of its own in Forge; give its register instead`);
   const defs = readFileSync(`src/skills/${s.key}/logic.ts`, "utf8").matchAll(/type: "(skill_[a-z_]+)"/g);
   for (const d of defs) {
     if (types.has(d[1])) fail(`register type ${d[1]} is used twice`);

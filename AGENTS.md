@@ -33,6 +33,8 @@ scripts/check.ts            the checks Forge also runs
 - `menu`: the command, the title, one line for the menu, what the bare command does, how to use it,
   and one line for Kelvi's help, under 120 characters.
 - `kit`: the toolkit version the skill was built for (`KIT_VERSION`).
+- `page`: its entry in the website's left sidebar, optional: one character as its icon and the type
+  of the register it opens (`{ icon: "↗", register: "skill_links" }`).
 
 ## The handler (`handler.ts`)
 

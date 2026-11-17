@@ -19,5 +19,6 @@ export const links: SkillManifest = {
     helpLine: 'Links: send me a link to save it; "send me my Meet link" gets it back.',
     aliases: ["link", "links", "bookmarks", "saved links"],
   },
+  page: { icon: "↗", register: "skill_links" },
   handle,
 };

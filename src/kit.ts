@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.1.0";
+export const KIT_VERSION = "0.2.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -95,6 +95,17 @@ export interface SkillMenu {
   aliases: string[];
 }
 
+// The skill's entry in the left sidebar of Forge on the website: an icon, and what
+// it opens: the skill's own page in Forge (`path`, for a skill built inside Forge
+// with a page of its own), or else one of its registers (`register`, its type),
+// which Forge shows as a register like any other.
+export interface SkillPage {
+  // One character, shown before the title, such as "↗".
+  icon: string;
+  path?: string;
+  register?: string;
+}
+
 // What Kelvi needs to know about a skill to send it messages.
 export interface SkillManifest {
   key: string;
@@ -106,5 +117,7 @@ export interface SkillManifest {
   // Fixed words that reach the skill with no model call, such as "my links".
   matches(text: string): boolean;
   menu: SkillMenu;
+  // Its entry in the website's left sidebar; none means it has none.
+  page?: SkillPage;
   handle(ctx: SkillContext): Promise<void>;
 }
