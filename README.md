@@ -25,4 +25,10 @@ npm run check                 # import rules, manifests and types
 npm run try -- links "my Meet link: meet.google.com/abc-defg-hij" "my links" "send me my meet link"
 ```
 
-`AGENTS.md` has the structure, the toolkit and the rules, for people and AI coding agents.
+New to it? Start with [docs/BUILD-A-SKILL.md](docs/BUILD-A-SKILL.md), and a first skill from
+[docs/briefs](docs/briefs). `AGENTS.md` has the structure, the toolkit and the rules, for people
+and AI coding agents.
+
+## Licence
+
+Apache License 2.0 (`LICENSE`). Copyright 2026 Sudhanva Labs LLP.
