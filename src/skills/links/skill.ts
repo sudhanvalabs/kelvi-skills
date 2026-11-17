@@ -8,7 +8,7 @@ export const links: SkillManifest = {
   kit: KIT_VERSION,
   route: "links",
   routeDescription:
-    'the person\'s saved links: saving one by sending it, with or without a name ("my Google Meet link: meet.google.com/abc-defg-hij", "save this https://…", a link on its own), getting one back ("send me my Meet link", "the link to the Kelvi post", "what\'s my Zoom link?"), listing them ("my links", "my links about AI"), or renaming or deleting one ("rename 3 to Team standup", "delete the Zoom link"). A link with an instruction to do something with the page, such as "summarise this article" or "review this", is "work"; a link as part of a reminder ("remind me to read https://… tomorrow") is "actions".',
+    'the person\'s saved links: saving one by sending it, with or without a name ("my Google Meet link: meet.google.com/abc-defg-hij", "save this https://…", a link on its own), getting one back ("send me my Meet link", "the link to the Kelvi post", "what\'s my Zoom link?"), listing them ("my links", "my links about AI"), or renaming or deleting one ("rename 3 to Team standup", "delete the Zoom link"). A link with an instruction to do something with the page, such as "summarise this article" or "review this", is "work"; a link as part of a reminder ("remind me to read https://… tomorrow") is "actions". Only messages about links: "my documents", "my notes" or "my lists" are not links.',
   matches: isLinksText,
   menu: {
     command: "links",
