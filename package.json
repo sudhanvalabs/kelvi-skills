@@ -1,0 +1,23 @@
+{
+  "name": "kelvi-skills",
+  "version": "0.1.0",
+  "description": "Kelvi skills: features for Kelvi, the personal AI assistant in Forge, built on a small toolkit.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "private": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./kit": "./src/kit.ts"
+  },
+  "files": ["src"],
+  "scripts": {
+    "try": "tsx bench/bench.ts",
+    "test": "tsx --test test/*.test.ts",
+    "check": "tsx scripts/check.ts && tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  }
+}
