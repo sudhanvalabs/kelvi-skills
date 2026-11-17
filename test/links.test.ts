@@ -27,6 +27,8 @@ test("the kind of link comes from where it points", () => {
   assert.equal(tagOf("https://www.forgeprivate.com"), "Websites");
   assert.equal(hostOf("https://www.forgeprivate.com/kelvi"), "forgeprivate.com");
   assert.equal(tidyTitle("Kelvi is live | LinkedIn"), "Kelvi is live");
+  assert.equal(tidyTitle("GitHub - sudhanvalabs/kelvi-skills: Skills for Kelvi · GitHub", "https://github.com/sudhanvalabs/kelvi-skills"), "sudhanvalabs/kelvi-skills: Skills for Kelvi");
+  assert.equal(tidyTitle("KelviByForge", "https://www.forgeprivate.com/kelvi"), "KelviByForge");
 });
 
 test("what the person wrote is read", () => {

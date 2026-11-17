@@ -71,11 +71,15 @@ export function nameGiven(text: string): string {
   return t.length > 80 ? `${t.slice(0, 79).trimEnd()}…` : t.charAt(0).toUpperCase() + t.slice(1);
 }
 
-// A page's own title, tidied: "Kelvi | LinkedIn" is "Kelvi".
-export function tidyTitle(title: string): string {
-  const t = title.replace(/\s+/g, " ").trim();
-  const cut = t.replace(/\s+[|·–—-]\s+(LinkedIn|YouTube|X|Twitter|Instagram|Facebook|Medium|Reddit)$/i, "");
-  return cut.length > 80 ? `${cut.slice(0, 79).trimEnd()}…` : cut;
+// A page's own title, tidied: the site's own name is taken off either end, so
+// "Kelvi is live | LinkedIn" is "Kelvi is live", and "GitHub - a/b: Skills · GitHub"
+// is "a/b: Skills".
+export function tidyTitle(title: string, url = ""): string {
+  const brand = hostOf(url).split(".").slice(-2, -1)[0] ?? "";
+  const names = ["LinkedIn", "YouTube", "X", "Twitter", "Instagram", "Facebook", "Medium", "Reddit", ...(brand ? [brand] : [])].map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  let t = title.replace(/\s+/g, " ").trim();
+  t = t.replace(new RegExp(`\\s+[|·–—-]\\s+(${names})$`, "i"), "").replace(new RegExp(`^(${names})\\s+[|·–—:-]\\s+`, "i"), "").trim();
+  return t.length > 80 ? `${t.slice(0, 79).trimEnd()}…` : t;
 }
 
 // ─── What the person wrote ───────────────────────────────────────────────────

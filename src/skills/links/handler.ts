@@ -20,7 +20,7 @@ export async function handle(ctx: SkillContext): Promise<void> {
         lines.push(`Already saved as *${have.name}*.`);
         continue;
       }
-      const name = (cmd.urls.length === 1 && cmd.name) || tidyTitle((await ctx.web.title(url)) ?? "") || hostOf(url);
+      const name = (cmd.urls.length === 1 && cmd.name) || tidyTitle((await ctx.web.title(url)) ?? "", url) || hostOf(url);
       const rec = await reg.add({ name, url, tag: tagOf(url), saved_on: ctx.person.today });
       links.push(linkOf(rec));
       lines.push(`Saved *${name}*${tagOf(url) === "Websites" ? "" : ` (${tagOf(url).toLowerCase()})`}.`);
