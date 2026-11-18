@@ -137,3 +137,22 @@ test("store the audio file is keeping the recording; the same recording kept aga
   assert.match((await b.send("store the audio file", "diary"))[0], /already in your diary/);
   assert.equal(b.registers.get("skill_diary")!.length, 1);
 });
+
+test("deleting an entry deletes its recording; a recording deleted elsewhere is forgotten", async () => {
+  const { bench } = await import("../bench/bench");
+  const doc = { id: "t1", filename: "Transcript", text: "ఐటీఎస్ అ బిగ్ హాల్ ఒకే అండ్ అక్కడ పీపుల్ ఆర్ అసెంబుల్డ్", sentAt: new Date().toISOString(), storedId: null, kind: "transcript" as const };
+  const ai = () => JSON.stringify({ title: "Grandma dream", language: "Telugu", english: "It's a big hall" });
+  const b = bench({ docs: [doc], ai, today: "2026-11-18" });
+  await b.send("diary", "diary");
+  await b.send("my diary", "diary");
+  const out = (await b.pick("delete", [1], null, "diary")).join("\n");
+  assert.match(out, /\[removed stored-t1\]/);
+  assert.match(out, /Deleted \*Grandma dream\* and its recording from your diary/);
+  assert.equal(b.registers.get("skill_diary")!.length, 0);
+  // A recording the person deleted in My documents: the send fails, the link goes.
+  b.registers.get("skill_diary")!.push({ id: "x", data: { title: "Old one", entry: "text", written_on: "2026-11-18", audio: "gone" }, createdAt: new Date().toISOString() });
+  await b.send("my diary", "diary");
+  const played = (await b.pick("play", [1], null, "diary")).join("\n");
+  assert.match(played, /no longer in your documents/);
+  assert.equal(b.registers.get("skill_diary")![0].data.audio, "");
+});

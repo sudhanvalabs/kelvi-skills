@@ -55,6 +55,7 @@ export function bench(
     };
   };
   let listed: string[] = [];
+  const gone = new Set<string>();
   const b: Bench = {
     registers,
     actions,
@@ -84,7 +85,18 @@ export function bench(
         },
         ai: { read: async ({ operation, text: t }) => o.ai?.(operation, t) ?? null },
         registers: { open },
-        documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async (d) => (d.kind === "transcript" || d.kind === "translation" ? `stored-${d.id}` : null), keepVoiceNote: async () => (o.heard ? "stored-voice" : null), send: async (id, caption) => void out.push(`[file ${id}: ${caption ?? ""}]`) !== undefined },
+        documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async (d) => (d.kind === "transcript" || d.kind === "translation" ? `stored-${d.id}` : null), keepVoiceNote: async () => (o.heard ? "stored-voice" : null), remove: async (id) => {
+            out.push(`[removed ${id}]`);
+            gone.add(id);
+            return true;
+          },
+          // A stored file the bench was told is gone ("gone…") or that was removed cannot be sent.
+          send: async (id, caption) => {
+            if (gone.has(id) || id.startsWith("gone")) return false;
+            out.push(`[file ${id}: ${caption ?? ""}]`);
+            return true;
+          },
+        },
         actions: { add: async (what, due) => void actions.push({ what, due }) },
         rates: { inr: async (c) => (c === "INR" ? 1 : null) },
         web: {

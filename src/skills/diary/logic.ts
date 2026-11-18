@@ -2,7 +2,7 @@ import type { RegisterDef, SkillRecord } from "../../kit";
 
 // Diary: entries the person dictates, forwards or types, kept with the date and
 // time and a title, in English with the original language kept, and found again by
-// asking ("when did I dream about Appaji?"). The rules, with no model and no
+// asking ("when did I dream about Grandma?"). The rules, with no model and no
 // database, so they are tested on their own (test/diary.test.ts).
 
 export const DIARY: RegisterDef = {
@@ -81,15 +81,15 @@ export function diaryCommand(text: string): DiaryCommand | null {
     return { kind: "find", query: when.replace(/^(?:about|on)\s+/, "") };
   }
   if (/^(?:diary help|help with (?:my )?diary)$/.test(t)) return { kind: "help" };
-  // "when did I dream about Appaji?", "what did I write about the interview?",
-  // "find Appaji in my diary".
+  // "when did I dream about Grandma?", "what did I write about the interview?",
+  // "find Grandma in my diary".
   const find =
     t.match(/^(?:when\s+did\s+i|did\s+i\s+ever|have\s+i\s+ever)\s+(.+)$/) ??
     t.match(/^what\s+did\s+i\s+write\s+(?:about|on)\s+(.+)$/) ??
     t.match(/^(?:find|search(?:\s+for)?|look\s+for)\s+(.+?)\s+in\s+(?:my\s+)?diary$/) ??
     t.match(/^(?:search|find in)\s+(?:my\s+)?diary\s+(?:for\s+)?(.+)$/) ??
     t.match(/^(?:show|give|send)(?:\s+me)?\s+(?:my\s+|the\s+)?diary\s+(?:entry|note|notes|entries)\s+(?:about|on|for)\s+(.+)$/);
-  // "play the Appaji dream", "play my diary entry about Appaji": heard as it was told.
+  // "play the Grandma dream", "play my diary entry about Grandma": heard as it was told.
   const play = t.match(/^(?:play|listen to|hear)\s+(?:me\s+)?(?:my\s+|the\s+)?(?:diary\s+)?(?:entry\s+|recording\s+)?(?:about\s+|on\s+)?(.+?)(?:\s+(?:from|in)\s+(?:my\s+)?diary)?$/);
   if (play) return { kind: "find", query: play[1].trim(), play: true };
   if (find) return { kind: "find", query: find[1].replace(/\s+in\s+(?:my\s+)?diary$/, "").trim() };
@@ -113,7 +113,7 @@ export function entryFrom(text: string): string {
 
 // The words that reach the diary with no model call: an entry ("diary: …"), filing
 // the latest recording ("diary"), the list, and searches that name the diary. A
-// question such as "when did I dream about Appaji?" goes through the sorting step.
+// question such as "when did I dream about Grandma?" goes through the sorting step.
 export function isDiaryText(text: string): boolean {
   const c = diaryCommand(text);
   if (!c) return false;
@@ -128,7 +128,7 @@ const stem = (w: string) => w.replace(/(ing|ed|es|s|t)$/, "");
 const wordsOf = (s: string) => s.toLowerCase().split(/[^a-z0-9]+/).filter((w) => w.length > 1 && !SMALL.has(w));
 
 // Entries whose title or text holds the query's words, best first. "dream about
-// Appaji" finds an entry titled "Appaji dream", and "dreamt" finds "dream".
+// Grandma" finds an entry titled "Grandma dream", and "dreamt" finds "dream".
 export function matchEntries(entries: Entry[], query: string): Entry[] {
   const want = wordsOf(query).map(stem);
   if (!want.length) return [];
@@ -167,11 +167,11 @@ export function inPeriod(on: string, period: Period, today: string): boolean {
 
 export const TITLE_INSTRUCTIONS = `You prepare a personal diary entry. You are given its text, which may be in English or in another language. Reply with JSON only, no prose:
 {"title": "...", "english": "...", "language": "..."}
-- "title": two to five words naming what the entry is about, specific and plain ("Appaji dream", "Interview at Infosys", "Fight with Ravi"). No date, no quotation marks.
+- "title": two to five words naming what the entry is about, specific and plain ("Grandma dream", "Interview at Infosys", "Fight with Ravi"). No date, no quotation marks.
 - "english": the whole entry in English, complete and faithful, in the first person as written. If it is already English, copy it as it is. Never summarise, shorten or add anything.
 - "language": the language the text was in, in English ("Telugu", "Hindi", "English").`;
 
-export const FIND_INSTRUCTIONS = `A person asks about their own diary. You are given their question and a list of entries, each with an id, a date, a title and the start of its text. Reply with JSON only: {"ids": ["…"]}, the ids of the entries that answer the question, best first, at most five; an empty list when none does. Choose by meaning, not only words: "the dream about my father" matches an entry about "Appaji" if it says he is the person's father.`;
+export const FIND_INSTRUCTIONS = `A person asks about their own diary. You are given their question and a list of entries, each with an id, a date, a title and the start of its text. Reply with JSON only: {"ids": ["…"]}, the ids of the entries that answer the question, best first, at most five; an empty list when none does. Choose by meaning, not only words: "the dream about my grandmother" matches an entry about "Ammamma" if it says she is the person's grandmother.`;
 
 function jsonIn(text: string): Record<string, unknown> | null {
   const m = text.match(/\{[\s\S]*\}/);
@@ -247,7 +247,7 @@ export function diaryList(entries: Entry[], period: Period, today: string): { he
   return {
     heading: `Your diary${PERIOD_LABEL[period]}`,
     items: shown.map((e) => ({ id: e.id, line: `*${e.title}*${e.audio ? " 🎙" : ""}, ${longDate(e.writtenOn)}` })),
-    add: ["diary: last night I dreamt about Appaji", 'a voice note starting "diary"', 'forward a recording, then "diary"'],
+    add: ["diary: last night I dreamt about Grandma", 'a voice note starting "diary"', 'forward a recording, then "diary"'],
     verbs: shown.some((e) => e.audio) ? ["show 2", "play 2", "rename 2 to …", "delete 2"] : ["show 2", "rename 2 to …", "delete 2"],
   };
 }
@@ -261,13 +261,13 @@ export function listReply(entries: Entry[], period: Period, today: string): stri
 
 export const DIARY_HELP = [
   "*Diary*",
-  '• Write one: start a voice note or a message with "diary": "Diary: last night I dreamt about Appaji…". I keep it with the date, the time and a title, in the language you spoke and in English, with your voice note.',
+  '• Write one: start a voice note or a message with "diary": "Diary: last night I dreamt about Grandma…". I keep it with the date, the time and a title, in the language you spoke and in English, with your voice note.',
   '• From a recording: forward it, or send it as a file (📎, then Document). When I have sent you its text, reply "diary".',
   '• Add the recording to an entry that has none: send the recording again, then reply "store the audio file".',
   '• See them: "my diary", "my diary last week". Entries with a recording are marked 🎙.',
-  '• Then by number: "show 2" (the text and the recording), "play 2" (the recording only), "rename 2 to …", "delete 2".',
-  '• By name: "play the Appaji dream", "show my diary entry about Appaji".',
-  '• Find one: "when did I dream about Appaji?", "what did I write about the interview?".',
+  '• Then by number: "show 2" (the text and the recording), "play 2" (the recording only), "rename 2 to …", "delete 2" (with its recording).',
+  '• By name: "play the Grandma dream", "show my diary entry about Grandma".',
+  '• Find one: "when did I dream about Grandma?", "what did I write about the interview?".',
 ].join("\n");
 
 // Whether two texts are the same recording's words: the same once letters alone are

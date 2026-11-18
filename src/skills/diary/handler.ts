@@ -2,7 +2,7 @@ import type { SkillContext, SkillDocument, SkillPicked } from "../../kit";
 import { asked, sameWords, DIARY, DIARY_HELP, diaryCommand, diaryList, entryFrom, entryOf, entryText, FIND_INSTRUCTIONS, fallbackTitle, foundReply, matchEntries, readIds, readTitle, savedReply, TITLE_INSTRUCTIONS, type Entry } from "./logic";
 
 // Diary: reached by "diary: …", "diary" after a recording, "my diary", and the
-// sorting step for questions such as "when did I dream about Appaji?".
+// sorting step for questions such as "when did I dream about Grandma?".
 export async function handle(ctx: SkillContext): Promise<void> {
   const reg = await ctx.registers.open(DIARY);
   if (ctx.picked) return picked(ctx, reg, ctx.picked);
@@ -43,13 +43,13 @@ export async function handle(ctx: SkillContext): Promise<void> {
     const ids = readIds(out);
     found = ids.map((id) => entries.find((e) => e.id === id)).filter((e): e is Entry => !!e);
   }
-  // "play the Appaji dream": the recording only, not the text again.
+  // "play the Grandma dream": the recording only, not the text again.
   if (!play || !found.length) await ctx.reply(foundReply(found, query));
   // The recording itself, as it was told: the entry asked to be played, or the one
   // entry found.
   const hear = play ? found.slice(0, 1) : found.length === 1 ? found : [];
   for (const e of hear) {
-    if (e.audio) await ctx.documents.send(e.audio, `🎙 ${e.title}`);
+    if (e.audio) await playOrForget(ctx, reg, e);
     else if (play) await ctx.reply(`I don't have a recording of *${e.title}*; it was typed, or kept before I saved recordings.`);
   }
 }
@@ -63,7 +63,7 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
   // the entry it already made is brought up to date, not copied.
   const earlier = source === "Recording" ? (await reg.list()).find((r) => [r.data.entry, r.data.original].some((v) => typeof v === "string" && sameWords(v, text))) : undefined;
   // The recording itself, kept in the person's stored documents (folder Diary).
-  // Named after the entry's title, so it reads "Appaji dream.mp3" in My documents.
+  // Named after the entry's title, so it reads "Grandma dream.mp3" in My documents.
   const keepAudio = (title: string) => {
     const keepAs = { folder: "Diary", subfolder: null, title, kind: "Recording", date: ctx.person.today };
     return source === "Voice note" ? ctx.documents.keepVoiceNote(keepAs) : doc && source === "Recording" ? ctx.documents.keep(doc, keepAs) : Promise.resolve(null);
@@ -129,25 +129,41 @@ async function picked(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["r
     case "send":
       for (const e of chosen) {
         await ctx.reply(entryText(e));
-        if (e.audio) await ctx.documents.send(e.audio, `🎙 ${e.title}`);
+        if (e.audio) await playOrForget(ctx, reg, e);
       }
       return;
     case "play":
       for (const e of chosen) {
-        if (e.audio) await ctx.documents.send(e.audio, `🎙 ${e.title}`);
+        if (e.audio) await playOrForget(ctx, reg, e);
         else await ctx.reply(`I don't have a recording of *${e.title}*; it was typed, or kept before I saved recordings.`);
       }
       return;
     case "rename": {
-      if (chosen.length > 1 || !p.target) return ctx.reply('Rename one at a time, for example "rename 2 to Appaji dream".');
+      if (chosen.length > 1 || !p.target) return ctx.reply('Rename one at a time, for example "rename 2 to Grandma dream".');
       const title = p.target.trim().slice(0, 80);
       await reg.update(chosen[0].id, { title });
       return ctx.reply(`Renamed to *${title}*.`);
     }
-    case "delete":
-      for (const e of chosen) await reg.remove(e.id);
-      return ctx.reply(chosen.length === 1 ? `Deleted *${chosen[0].title}* from your diary.` : `Deleted ${chosen.length} entries from your diary: ${chosen.map((e) => e.title).join(", ")}.`);
+    case "delete": {
+      // The entry and its recording go together (PE, 18 November 2026).
+      let recordings = 0;
+      for (const e of chosen) {
+        if (e.audio && (await ctx.documents.remove(e.audio))) recordings++;
+        await reg.remove(e.id);
+      }
+      const also = recordings ? (recordings === 1 && chosen.length === 1 ? " and its recording" : ` and ${recordings} recording${recordings === 1 ? "" : "s"}`) : "";
+      return ctx.reply(chosen.length === 1 ? `Deleted *${chosen[0].title}*${also} from your diary.` : `Deleted ${chosen.length} entries${also} from your diary: ${chosen.map((e) => e.title).join(", ")}.`);
+    }
     default:
       return ctx.reply('Reply with numbers: "show 2", "play 2", "rename 2 to …", "delete 2".');
   }
+}
+
+// The entry's recording sent; when it is no longer in the person's documents (deleted
+// there), the entry stops pointing at it and the person is told.
+async function playOrForget(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["registers"]["open"]>>, e: Entry): Promise<void> {
+  if (!e.audio) return;
+  if (await ctx.documents.send(e.audio, `🎙 ${e.title}`)) return;
+  await reg.update(e.id, { audio: "" });
+  await ctx.reply(`The recording of *${e.title}* is no longer in your documents, so I can't play it. Send it again and reply "store the audio file" to add it back.`);
 }

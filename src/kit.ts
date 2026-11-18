@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.7.0";
+export const KIT_VERSION = "0.9.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -109,6 +109,10 @@ export interface SkillContext {
     // Since 0.4.0: sends the person one of their stored documents (a recording plays
     // in the chat), with a caption; false when it is not theirs or cannot be sent.
     send(storedId: string, caption?: string): Promise<boolean>;
+    // Since 0.9.0: deletes one of the person's stored documents, such as an entry's
+    // recording when the entry is deleted; false when it is not theirs or is gone.
+    // Forge also clears any register field that pointed at it.
+    remove(storedId: string): Promise<boolean>;
   };
   // An action in the person's My actions, which Kelvi reminds them of.
   actions: { add(what: string, due: string): Promise<void> };
