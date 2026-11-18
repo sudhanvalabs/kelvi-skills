@@ -56,7 +56,7 @@ export interface SkillDocument {
 
 // Since 0.5.0: what a reply by number asked for, after the skill's own numbered
 // list (replyList): "show 2", "1 and 3 done", "delete 2", "play 2", "rename 1 to
-// Travel", "move 3 to Friday", "send 2 to Raghu". Forge reads the numbers, typed or
+// Travel", "move 3 to Friday", "send 2 to Kiran". Forge reads the numbers, typed or
 // spoken, and gives the skill the ids of the entries they stand for, in order. A
 // delete has already been confirmed by the person.
 // Since 0.6.0, "cancel" too: "cancel 2" (a subscription the person has cancelled).
