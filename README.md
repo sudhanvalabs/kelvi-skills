@@ -15,6 +15,7 @@ new version reaches people only through a reviewed change in Forge.
 | Skill | What it does |
 |---|---|
 | `links` | Saves links sent to Kelvi (a Meet link, a website, a post) and sends them back when asked |
+| `diary` | Keeps diary entries spoken, forwarded or typed, with the date, time and a title, in English with the original kept, and finds them again by asking |
 
 ## Working on a skill
 

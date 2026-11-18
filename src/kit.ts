@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.2.0";
+export const KIT_VERSION = "0.3.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -49,12 +49,19 @@ export interface SkillDocument {
   text: string;
   sentAt: string;
   storedId: string | null;
+  // Since 0.3.0: a document or photo the person sent, the transcript of a recording
+  // Kelvi transcribed, or a translation Kelvi made.
+  kind?: "document" | "transcript" | "translation";
 }
 
 export interface SkillContext {
   // The message, or the document's caption.
   text: string;
-  person: { userId: string; orgId: string; firstName: string; today: string; timezone: string };
+  // `now` (since 0.3.0) is the person's local time, HH:MM.
+  person: { userId: string; orgId: string; firstName: string; today: string; now: string; timezone: string };
+  // Since 0.3.0: when the message was a voice note in another language, what Kelvi
+  // heard in it, before the translation into English that `text` holds.
+  heard?: { language: string; original: string } | null;
   reply(text: string): Promise<void>;
   // One model call that reads text into JSON: masked before the model (and the
   // masked values put back in the answer), billed and logged as `operation`. Null
@@ -63,8 +70,9 @@ export interface SkillContext {
   ai: { read(o: { operation: string; instructions: string; text: string }): Promise<string | null> };
   registers: { open(def: RegisterDef): Promise<SkillRegister> };
   documents: {
-    // Documents sent within the last `minutes`, newest first.
-    recent(minutes: number): Promise<SkillDocument[]>;
+    // Documents sent within the last `minutes`, newest first; with transcripts (since
+    // 0.3.0), also the transcripts of recordings and Kelvi's translations.
+    recent(minutes: number, o?: { transcripts?: boolean }): Promise<SkillDocument[]>;
     // Keeps the original in the person's stored documents; its id, or null when
     // storage is not set up or the original is no longer available.
     keep(doc: SkillDocument, o: { folder: string; subfolder: string | null; title: string; kind: string; date: string | null }): Promise<string | null>;

@@ -11,12 +11,22 @@ import { SKILLS } from "../src/index";
 import type { RegisterDef, SkillContext, SkillRecord, SkillRegister } from "../src/kit";
 
 export interface Bench {
-  send(text: string): Promise<string[]>;
+  send(text: string, key?: string): Promise<string[]>;
   registers: Map<string, SkillRecord[]>;
   actions: { what: string; due: string }[];
 }
 
-export function bench(o: { today?: string; titles?: Record<string, string>; ai?: (operation: string, text: string) => string | null; liveWeb?: boolean } = {}): Bench {
+export function bench(
+  o: {
+    today?: string;
+    now?: string;
+    titles?: Record<string, string>;
+    ai?: (operation: string, text: string) => string | null;
+    liveWeb?: boolean;
+    heard?: { language: string; original: string } | null;
+    docs?: import("../src/kit").SkillDocument[];
+  } = {},
+): Bench {
   const registers = new Map<string, SkillRecord[]>();
   const actions: { what: string; due: string }[] = [];
   let n = 0;
@@ -44,18 +54,20 @@ export function bench(o: { today?: string; titles?: Record<string, string>; ai?:
   return {
     registers,
     actions,
-    send: async (text) => {
+    send: async (text, key) => {
       const out: string[] = [];
-      const skill = SKILLS.find((s) => s.matches(text)) ?? SKILLS[0];
+      // The skill named, else the one whose fixed words the message is, else the first.
+      const skill = SKILLS.find((s) => s.key === key) ?? SKILLS.find((s) => s.matches(text)) ?? SKILLS[0];
       const ctx: SkillContext = {
         text,
-        person: { userId: "bench-user", orgId: "bench-org", firstName: "Priya", today: o.today ?? new Date().toISOString().slice(0, 10), timezone: "Asia/Kolkata" },
+        person: { userId: "bench-user", orgId: "bench-org", firstName: "Priya", today: o.today ?? new Date().toISOString().slice(0, 10), now: o.now ?? "21:30", timezone: "Asia/Kolkata" },
+        heard: o.heard ?? null,
         reply: async (t) => {
           out.push(t);
         },
         ai: { read: async ({ operation, text: t }) => o.ai?.(operation, t) ?? null },
         registers: { open },
-        documents: { recent: async () => [], keep: async () => null },
+        documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async () => null },
         actions: { add: async (what, due) => void actions.push({ what, due }) },
         rates: { inr: async (c) => (c === "INR" ? 1 : null) },
         web: {
@@ -101,6 +113,6 @@ if (process.argv[1]?.endsWith("bench.ts")) {
   const b = bench({ today, titles, liveWeb });
   for (const m of messages) {
     console.log(`\n> ${m}${skill.matches(m) ? "" : "   (not one of this skill's fixed words: on WhatsApp the sorting step decides)"}`);
-    for (const r of await b.send(m)) console.log(r);
+    for (const r of await b.send(m, skill.key)) console.log(r);
   }
 }
