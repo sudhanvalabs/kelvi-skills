@@ -43,7 +43,8 @@ export async function handle(ctx: SkillContext): Promise<void> {
     const ids = readIds(out);
     found = ids.map((id) => entries.find((e) => e.id === id)).filter((e): e is Entry => !!e);
   }
-  await ctx.reply(foundReply(found, query));
+  // "play the Appaji dream": the recording only, not the text again.
+  if (!play || !found.length) await ctx.reply(foundReply(found, query));
   // The recording itself, as it was told: the entry asked to be played, or the one
   // entry found.
   const hear = play ? found.slice(0, 1) : found.length === 1 ? found : [];
@@ -62,18 +63,20 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
   // the entry it already made is brought up to date, not copied.
   const earlier = source === "Recording" ? (await reg.list()).find((r) => [r.data.entry, r.data.original].some((v) => typeof v === "string" && sameWords(v, text))) : undefined;
   // The recording itself, kept in the person's stored documents (folder Diary).
-  const keepAs = { folder: "Diary", subfolder: null, title: fallbackTitle(text), kind: "Recording", date: ctx.person.today };
-  const keepAudio = () => (source === "Voice note" ? ctx.documents.keepVoiceNote(keepAs) : doc && source === "Recording" ? ctx.documents.keep(doc, keepAs) : Promise.resolve(null));
+  // Named after the entry's title, so it reads "Appaji dream.mp3" in My documents.
+  const keepAudio = (title: string) => {
+    const keepAs = { folder: "Diary", subfolder: null, title, kind: "Recording", date: ctx.person.today };
+    return source === "Voice note" ? ctx.documents.keepVoiceNote(keepAs) : doc && source === "Recording" ? ctx.documents.keep(doc, keepAs) : Promise.resolve(null);
+  };
   if (earlier) {
     const e = entryOf(earlier);
-    const audio = e.audio ? null : await keepAudio();
+    const audio = e.audio ? null : await keepAudio(e.title);
     if (audio) {
       await reg.update(earlier.id, { audio });
       return ctx.reply(`*${e.title}* was already in your diary; I've added its recording, so you can hear it again: "play the ${e.title}".`);
     }
     return ctx.reply(`*${e.title}* is already in your diary, from ${e.writtenOn}.`);
   }
-  const audio = await keepAudio();
   const rec = await reg.add({
     title: fallbackTitle(text),
     entry: text,
@@ -83,7 +86,7 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
     // The spoken "diary:" taken off the original too, in whatever language it was said.
     original: heard?.original.replace(/^\s*[^\s:：,]{1,20}(?:\s+[^\s:：,]{1,20})?\s*[:：,]\s*/u, "") ?? "",
     source,
-    audio: audio ?? "",
+    audio: "",
   });
   const out = await ctx.ai.read({ operation: "diary_title", instructions: TITLE_INSTRUCTIONS, text });
   const t = readTitle(out);
@@ -97,6 +100,9 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
     patch.original = text;
     patch.language = t!.language;
   }
+  // The recording, once the entry has its title.
+  const audio = await keepAudio(typeof patch.title === "string" ? patch.title : fallbackTitle(text));
+  if (audio) patch.audio = audio;
   if (Object.keys(patch).length) await reg.update(rec.id, patch);
   const entry = entryOf({ ...rec, data: { ...rec.data, ...patch } });
   // When the AI could not run, Kelvi has already said why; the entry is still kept.

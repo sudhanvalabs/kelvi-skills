@@ -74,7 +74,7 @@ export function diaryCommand(text: string): DiaryCommand | null {
     t.match(/^(?:my|show(?: me)?(?: my| the)?|read(?: me)?(?: my| the)?|open(?: my| the)?|list(?: my| the)?|see(?: my| the)?|view(?: my| the)?)\s+(?:diary|diaries|journal)(?:\s+entries)?(?:\s+(?:for|from|of)?\s*(.+))?$/) ??
     t.match(/^(?:my\s+)?diary\s+(?:entries|list)()$/);
   if (list) {
-    const when = (list[1] ?? "").trim();
+    const when = (list[1] ?? "").trim().replace(/^(?:entry|entries|note|notes)\s+/, "");
     if (!when) return { kind: "list", period: "all" };
     const p = PERIODS.find(([re]) => re.test(when));
     if (p) return { kind: "list", period: p[1] };
@@ -261,10 +261,13 @@ export function listReply(entries: Entry[], period: Period, today: string): stri
 
 export const DIARY_HELP = [
   "*Diary*",
-  '• Speak or type an entry starting "diary": "Diary: last night I dreamt about Appaji…". I keep it with the date, the time and a title, in English, with the original if you spoke another language.',
-  '• A recording from another chat: forward it, and when I have sent you its text, reply "diary". I keep the recording too, so you can hear it again: "play the Appaji dream".',
-
-  '• Find it again: "when did I dream about Appaji?", "what did I write about the interview?", "my diary", "my diary last week".',
+  '• Write one: start a voice note or a message with "diary": "Diary: last night I dreamt about Appaji…". I keep it with the date, the time and a title, in the language you spoke and in English, with your voice note.',
+  '• From a recording: forward it, or send it as a file (📎, then Document). When I have sent you its text, reply "diary".',
+  '• Add the recording to an entry that has none: send the recording again, then reply "store the audio file".',
+  '• See them: "my diary", "my diary last week". Entries with a recording are marked 🎙.',
+  '• Then by number: "show 2" (the text and the recording), "play 2" (the recording only), "rename 2 to …", "delete 2".',
+  '• By name: "play the Appaji dream", "show my diary entry about Appaji".',
+  '• Find one: "when did I dream about Appaji?", "what did I write about the interview?".',
 ].join("\n");
 
 // Whether two texts are the same recording's words: the same once letters alone are
