@@ -24,7 +24,7 @@ test("only the diary's own words skip the sorting step", () => {
 });
 
 test("an entry is found by its words, a dream by dreamt", () => {
-  const e = (id: string, title: string, entry: string, on: string): Entry => ({ id, title, entry, writtenOn: on, at: "21:00", language: null, original: null });
+  const e = (id: string, title: string, entry: string, on: string): Entry => ({ id, title, entry, writtenOn: on, at: "21:00", language: null, original: null, audio: null });
   const all = [e("1", "Appaji dream", "Last night I dreamt Appaji was smiling at the old house.", "2026-11-10"), e("2", "Interview at Infosys", "The interview went well.", "2026-11-12"), e("3", "Temple visit", "Went to the temple with Appaji's photo.", "2026-11-15")];
   assert.deepEqual(matchEntries(all, "dream about appaji").map((x) => x.id), ["1"]);
   assert.deepEqual(matchEntries(all, "the interview").map((x) => x.id), ["2"]);
@@ -71,4 +71,31 @@ test("an entry is told from a question when the sorting step sends one", () => {
   assert.ok(asked("when did I dream about Appaji?") && asked("which day did I meet Ravi") && !asked("Today I felt really happy after the call with mom"));
   assert.equal(entryFrom("Today I felt really happy after the call with mom, want to remember this in my diary"), "Today I felt really happy after the call with mom");
   assert.equal(entryFrom("add this to my diary: the kids won the match"), "the kids won the match");
+});
+
+test("my diary in other words", () => {
+  for (const t of ["my diary", "My diaries", "show diary", "show my diary", "open the diary", "diary entries", "my diary entries", "list my diary", "my journal"]) assert.equal(diaryCommand(t)?.kind, "list", t);
+  assert.deepEqual(diaryCommand("my diary last week"), { kind: "list", period: "last_week" });
+});
+
+test("play an entry", () => {
+  assert.deepEqual(diaryCommand("play the Appaji dream"), { kind: "find", query: "appaji dream", play: true });
+  assert.deepEqual(diaryCommand("play my diary entry about Appaji"), { kind: "find", query: "appaji", play: true });
+  assert.equal(isDiaryText("play the Appaji dream from my diary"), true);
+  assert.equal(isDiaryText("play some music"), false);
+});
+
+test("a recording kept in the diary keeps its audio, once, and plays", async () => {
+  const { bench } = await import("../bench/bench");
+  const doc = { id: "t1", filename: "Transcript", text: "ఐటీఎస్ అ బిగ్ హాల్", sentAt: new Date().toISOString(), storedId: null, kind: "transcript" as const };
+  const ai = (op: string) => (op === "diary_title" ? JSON.stringify({ title: "Appaji dream", language: "Telugu", english: "It's a big hall" }) : "[]");
+  const b = bench({ docs: [doc], ai, today: "2026-11-18" });
+  const saved = await b.send("diary", "diary");
+  assert.match(saved.join("\n"), /kept the recording too/);
+  const again = await b.send("diary", "diary");
+  assert.match(again.join("\n"), /already in your diary/);
+  const list = await b.send("my diary", "diary");
+  assert.match(list.join("\n"), /Appaji dream\* 🎙/);
+  const played = await b.send("play the Appaji dream", "diary");
+  assert.match(played.join("\n"), /\[file stored-t1: 🎙 Appaji dream\]/);
 });

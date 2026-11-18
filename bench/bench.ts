@@ -67,7 +67,7 @@ export function bench(
         },
         ai: { read: async ({ operation, text: t }) => o.ai?.(operation, t) ?? null },
         registers: { open },
-        documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async () => null },
+        documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async (d) => (d.kind === "transcript" || d.kind === "translation" ? `stored-${d.id}` : null), keepVoiceNote: async () => (o.heard ? "stored-voice" : null), send: async (id, caption) => void out.push(`[file ${id}: ${caption ?? ""}]`) !== undefined },
         actions: { add: async (what, due) => void actions.push({ what, due }) },
         rates: { inr: async (c) => (c === "INR" ? 1 : null) },
         web: {

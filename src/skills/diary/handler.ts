@@ -12,7 +12,7 @@ export async function handle(ctx: SkillContext): Promise<void> {
   if (cmd?.kind === "file") {
     const doc = latest(await ctx.documents.recent(24 * 60, { transcripts: true }));
     if (!doc) return ctx.reply('Send or forward the recording first. When I have sent you its text, reply "diary" and I\'ll keep it in your diary.');
-    return write(ctx, reg, doc.text, doc.kind === "document" ? "Typed" : "Recording");
+    return write(ctx, reg, doc.text, doc.kind === "document" ? "Typed" : "Recording", doc);
   }
 
   // Sent here by the sorting step with none of the diary's words: an entry to keep,
@@ -21,6 +21,7 @@ export async function handle(ctx: SkillContext): Promise<void> {
     const text = entryFrom(ctx.text);
     if (text.length > 1) return write(ctx, reg, text, ctx.heard ? "Voice note" : "Typed");
   }
+  const play = cmd?.kind === "find" && cmd.play === true;
   const entries = (await reg.list()).map(entryOf);
   if (cmd?.kind === "list") return ctx.reply(listReply(entries, cmd.period, ctx.person.today));
   const query = cmd?.kind === "find" ? cmd.query : ctx.text;
@@ -38,14 +39,37 @@ export async function handle(ctx: SkillContext): Promise<void> {
     const ids = readIds(out);
     found = ids.map((id) => entries.find((e) => e.id === id)).filter((e): e is Entry => !!e);
   }
-  return ctx.reply(foundReply(found, query));
+  await ctx.reply(foundReply(found, query));
+  // The recording itself, as it was told: the entry asked to be played, or the one
+  // entry found.
+  const hear = play ? found.slice(0, 1) : found.length === 1 ? found : [];
+  for (const e of hear) {
+    if (e.audio) await ctx.documents.send(e.audio, `🎙 ${e.title}`);
+    else if (play) await ctx.reply(`I don't have a recording of *${e.title}*; it was typed, or kept before I saved recordings.`);
+  }
 }
 
 // Keeps an entry: saved at once with a plain title, so nothing is lost if the AI
 // cannot run, then given its English text and a title by the AI.
-async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["registers"]["open"]>>, text: string, source: "Voice note" | "Recording" | "Typed"): Promise<void> {
+async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["registers"]["open"]>>, text: string, source: "Voice note" | "Recording" | "Typed", doc?: SkillDocument): Promise<void> {
   const heard = source === "Voice note" ? ctx.heard ?? null : null;
   text = text.trim().replace(/^./u, (c) => c.toUpperCase());
+  // The same recording kept again ("diary" twice, or sent again to add its audio):
+  // the entry it already made is brought up to date, not copied.
+  const earlier = source === "Recording" ? (await reg.list()).find((r) => [r.data.entry, r.data.original].some((v) => typeof v === "string" && v.trim() === text)) : undefined;
+  // The recording itself, kept in the person's stored documents (folder Diary).
+  const keepAs = { folder: "Diary", subfolder: null, title: fallbackTitle(text), kind: "Recording", date: ctx.person.today };
+  const keepAudio = () => (source === "Voice note" ? ctx.documents.keepVoiceNote(keepAs) : doc && source === "Recording" ? ctx.documents.keep(doc, keepAs) : Promise.resolve(null));
+  if (earlier) {
+    const e = entryOf(earlier);
+    const audio = e.audio ? null : await keepAudio();
+    if (audio) {
+      await reg.update(earlier.id, { audio });
+      return ctx.reply(`*${e.title}* was already in your diary; I've added its recording, so you can hear it again: "play the ${e.title}".`);
+    }
+    return ctx.reply(`*${e.title}* is already in your diary, from ${e.writtenOn}.`);
+  }
+  const audio = await keepAudio();
   const rec = await reg.add({
     title: fallbackTitle(text),
     entry: text,
@@ -55,6 +79,7 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
     // The spoken "diary:" taken off the original too, in whatever language it was said.
     original: heard?.original.replace(/^\s*[^\s:：,]{1,20}(?:\s+[^\s:：,]{1,20})?\s*[:：,]\s*/u, "") ?? "",
     source,
+    audio: audio ?? "",
   });
   const out = await ctx.ai.read({ operation: "diary_title", instructions: TITLE_INSTRUCTIONS, text });
   const t = readTitle(out);

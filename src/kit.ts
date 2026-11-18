@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.3.0";
+export const KIT_VERSION = "0.4.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -75,7 +75,14 @@ export interface SkillContext {
     recent(minutes: number, o?: { transcripts?: boolean }): Promise<SkillDocument[]>;
     // Keeps the original in the person's stored documents; its id, or null when
     // storage is not set up or the original is no longer available.
+    // A transcript or translation (since 0.4.0) keeps the recording it was made from.
     keep(doc: SkillDocument, o: { folder: string; subfolder: string | null; title: string; kind: string; date: string | null }): Promise<string | null>;
+    // Since 0.4.0: keeps the voice note this message came as, the person's own voice
+    // in the original language; its id, or null when the message was not a voice note.
+    keepVoiceNote(o: { folder: string; subfolder: string | null; title: string; kind: string; date: string | null }): Promise<string | null>;
+    // Since 0.4.0: sends the person one of their stored documents (a recording plays
+    // in the chat), with a caption; false when it is not theirs or cannot be sent.
+    send(storedId: string, caption?: string): Promise<boolean>;
   };
   // An action in the person's My actions, which Kelvi reminds them of.
   actions: { add(what: string, due: string): Promise<void> };

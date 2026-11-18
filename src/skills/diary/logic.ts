@@ -16,6 +16,9 @@ export const DIARY: RegisterDef = {
     { key: "language", label: "Spoken in", type: "text" },
     { key: "original", label: "Original", type: "text" },
     { key: "source", label: "From", type: "select", options: ["Voice note", "Recording", "Typed"] },
+    // The recording itself, in the person's stored documents (folder Diary), so the
+    // entry can be heard as it was told, in its own language (PE, 18 November 2026).
+    { key: "audio", label: "Recording", type: "text" },
   ],
 };
 
@@ -27,11 +30,13 @@ export interface Entry {
   at: string;
   language: string | null;
   original: string | null;
+  // The stored recording's id, when the entry was spoken.
+  audio: string | null;
 }
 
 export function entryOf(r: SkillRecord): Entry {
   const s = (v: unknown) => (typeof v === "string" ? v.trim() : "");
-  return { id: r.id, title: s(r.data.title) || "Diary entry", entry: s(r.data.entry), writtenOn: s(r.data.written_on).slice(0, 10), at: s(r.data.at), language: s(r.data.language) || null, original: s(r.data.original) || null };
+  return { id: r.id, title: s(r.data.title) || "Diary entry", entry: s(r.data.entry), writtenOn: s(r.data.written_on).slice(0, 10), at: s(r.data.at), language: s(r.data.language) || null, original: s(r.data.original) || null, audio: s(r.data.audio) || null };
 }
 
 // ─── What the person wrote ───────────────────────────────────────────────────
@@ -42,7 +47,7 @@ export type DiaryCommand =
   | { kind: "write"; text: string }
   | { kind: "file" }
   | { kind: "list"; period: Period }
-  | { kind: "find"; query: string }
+  | { kind: "find"; query: string; play?: boolean }
   | { kind: "help" };
 
 const PERIODS: [RegExp, Period][] = [
@@ -62,7 +67,9 @@ export function diaryCommand(text: string): DiaryCommand | null {
   if (write && write[1].trim().length > 1) return { kind: "write", text: write[1].trim() };
   // "diary", "store in diary", "put it in my diary": the latest recording or text sent.
   if (/^(?:dear\s+)?diary$|^(?:store|save|put|add|keep|file|write)\s+(?:it\s+|this\s+|that\s+)?(?:in|to|into)\s+(?:my\s+|the\s+)?diary$|^diary (?:it|this|that)$|^(?:to|for) (?:my\s+)?diary$/.test(t)) return { kind: "file" };
-  const list = t.match(/^(?:my|show(?: me)? my|read(?: me)? my|open my)\s+diary(?:\s+(?:for|from|of)?\s*(.+))?$/);
+  const list =
+    t.match(/^(?:my|show(?: me)?(?: my| the)?|read(?: me)?(?: my| the)?|open(?: my| the)?|list(?: my| the)?|see(?: my| the)?|view(?: my| the)?)\s+(?:diary|diaries|journal)(?:\s+entries)?(?:\s+(?:for|from|of)?\s*(.+))?$/) ??
+    t.match(/^(?:my\s+)?diary\s+(?:entries|list)()$/);
   if (list) {
     const when = (list[1] ?? "").trim();
     if (!when) return { kind: "list", period: "all" };
@@ -79,6 +86,9 @@ export function diaryCommand(text: string): DiaryCommand | null {
     t.match(/^(?:find|search(?:\s+for)?|look\s+for)\s+(.+?)\s+in\s+(?:my\s+)?diary$/) ??
     t.match(/^(?:search|find in)\s+(?:my\s+)?diary\s+(?:for\s+)?(.+)$/) ??
     t.match(/^(?:show|give|send)(?:\s+me)?\s+(?:my\s+|the\s+)?diary\s+(?:entry|note|notes|entries)\s+(?:about|on|for)\s+(.+)$/);
+  // "play the Appaji dream", "play my diary entry about Appaji": heard as it was told.
+  const play = t.match(/^(?:play|listen to|hear)\s+(?:me\s+)?(?:my\s+|the\s+)?(?:diary\s+)?(?:entry\s+|recording\s+)?(?:about\s+|on\s+)?(.+?)(?:\s+(?:from|in)\s+(?:my\s+)?diary)?$/);
+  if (play) return { kind: "find", query: play[1].trim(), play: true };
   if (find) return { kind: "find", query: find[1].replace(/\s+in\s+(?:my\s+)?diary$/, "").trim() };
   return null;
 }
@@ -205,13 +215,14 @@ export function clock(at: string): string {
   return `${h % 12 || 12}:${m[2]} ${h < 12 ? "am" : "pm"}`;
 }
 
-export function savedReply(e: { title: string; writtenOn: string; at: string; language: string | null }): string {
+export function savedReply(e: { title: string; writtenOn: string; at: string; language: string | null; audio?: string | null }): string {
   const lang = e.language && !/^english$/i.test(e.language) ? `, translated from ${e.language}` : "";
-  return `Saved in your diary: *${e.title}*, ${longDate(e.writtenOn)}${e.at ? `, ${clock(e.at)}` : ""}${lang}. Ask me about it any time, for example "when did I write about ${e.title.split(" ")[0]}?".`;
+  const audio = e.audio ? ` I've kept the recording too: "play the ${e.title}" to hear it.` : "";
+  return `Saved in your diary: *${e.title}*, ${longDate(e.writtenOn)}${e.at ? `, ${clock(e.at)}` : ""}${lang}.${audio} Ask me about it any time, for example "when did I write about ${e.title.split(" ")[0]}?".`;
 }
 
 export function entryText(e: Entry, full = true): string {
-  const head = `*${e.title}*\n${longDate(e.writtenOn)}${e.at ? `, ${clock(e.at)}` : ""}${e.language && !/^english$/i.test(e.language) ? ` (spoken in ${e.language})` : ""}`;
+  const head = `*${e.title}*${e.audio ? " 🎙" : ""}\n${longDate(e.writtenOn)}${e.at ? `, ${clock(e.at)}` : ""}${e.language && !/^english$/i.test(e.language) ? ` (spoken in ${e.language})` : ""}`;
   return full ? `${head}\n\n${e.entry}` : head;
 }
 
@@ -228,13 +239,14 @@ export function listReply(entries: Entry[], period: Period, today: string): stri
   const shown = entries.filter((e) => inPeriod(e.writtenOn, period, today)).sort((a, b) => b.writtenOn.localeCompare(a.writtenOn) || b.at.localeCompare(a.at));
   if (!entries.length) return DIARY_HELP;
   if (!shown.length) return `Nothing in your diary${PERIOD_LABEL[period]}. "my diary" lists every entry.`;
-  const lines = shown.slice(0, 20).map((e, i) => `${i + 1}. *${e.title}*, ${longDate(e.writtenOn)}`);
-  return [`*Your diary${PERIOD_LABEL[period]}* (${shown.length})`, `${lines.join("\n")}${shown.length > 20 ? `\n…and ${shown.length - 20} more on the website, under Diary.` : ""}`, 'Ask about any of them: "what did I write about the interview?"'].join("\n\n");
+  const lines = shown.slice(0, 20).map((e, i) => `${i + 1}. *${e.title}*${e.audio ? " 🎙" : ""}, ${longDate(e.writtenOn)}`);
+  return [`*Your diary${PERIOD_LABEL[period]}* (${shown.length})`, `${lines.join("\n")}${shown.length > 20 ? `\n…and ${shown.length - 20} more on the website, under Diary.` : ""}`, `Ask about any of them: "what did I write about the interview?"${shown.some((e) => e.audio) ? `. 🎙 ones you can hear again: "play the ${shown.find((e) => e.audio)!.title}".` : ""}`].join("\n\n");
 }
 
 export const DIARY_HELP = [
   "*Diary*",
   '• Speak or type an entry starting "diary": "Diary: last night I dreamt about Appaji…". I keep it with the date, the time and a title, in English, with the original if you spoke another language.',
-  '• A recording from another chat: forward it, and when I have sent you its text, reply "diary".',
+  '• A recording from another chat: forward it, and when I have sent you its text, reply "diary". I keep the recording too, so you can hear it again: "play the Appaji dream".',
+
   '• Find it again: "when did I dream about Appaji?", "what did I write about the interview?", "my diary", "my diary last week".',
 ].join("\n");
