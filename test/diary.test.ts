@@ -156,3 +156,13 @@ test("deleting an entry deletes its recording; a recording deleted elsewhere is 
   assert.match(played, /no longer in your documents/);
   assert.equal(b.registers.get("skill_diary")![0].data.audio, "");
 });
+
+test("a search of the diary is read with the conversation just before", async () => {
+  const { bench } = await import("../bench/bench");
+  const seen: string[] = [];
+  const b = bench({ today: "2026-11-18", recent: "Person: I dreamt of the beach house again\nKelvi: Saved in your diary: *Beach house dream*", ai: (op, t) => (seen.push(`${op}: ${t}`), op === "diary_title" ? JSON.stringify({ title: "Beach house dream", language: "English", english: "" }) : '{"ids":[]}') });
+  await b.send("diary: I dreamt of the beach house again", "diary");
+  await b.send("when did I write about that before?", "diary");
+  assert.ok(seen.some((s) => s.startsWith("diary_find:") && s.includes("beach house again")), "the search saw the conversation");
+  assert.ok(seen.every((s) => !s.startsWith("diary_title:") || !s.includes("Kelvi:")), "a title is read without it");
+});

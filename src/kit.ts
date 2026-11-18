@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.9.0";
+export const KIT_VERSION = "0.10.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -93,7 +93,15 @@ export interface SkillContext {
   // masked values put back in the answer), billed and logged as `operation`. Null
   // when it could not run (no credits, or the call failed); the person has then
   // been told, and the skill should stop.
-  ai: { read(o: { operation: string; instructions: string; text: string }): Promise<string | null> };
+  // Since 0.10.0, `conversation: true` puts the conversation just before (below)
+  // ahead of `text`, marked as context, for a reading that may refer back to it
+  // ("when did I write about that?"); leave it off for reading a document or a
+  // recording, which stands on its own.
+  ai: { read(o: { operation: string; instructions: string; text: string; conversation?: boolean }): Promise<string | null> };
+  // Since 0.10.0: the person's last few messages and Kelvi's replies, oldest first,
+  // for the past hour ("Person: …", "Kelvi: …" lines); "" when there are none. For the
+  // skill's own rules too, such as reading "it" as the entry just shown.
+  recent?: string;
   registers: { open(def: RegisterDef): Promise<SkillRegister> };
   documents: {
     // Documents sent within the last `minutes`, newest first; with transcripts (since

@@ -38,7 +38,8 @@ export async function handle(ctx: SkillContext): Promise<void> {
       .slice(0, 150)
       .map((e) => `${e.id} | ${e.writtenOn} | ${e.title} | ${e.entry.slice(0, 160).replace(/\s+/g, " ")}`)
       .join("\n");
-    const out = await ctx.ai.read({ operation: "diary_find", instructions: FIND_INSTRUCTIONS, text: `Question: ${ctx.text}\n\nEntries:\n${list}` });
+    // With the conversation, so "when did I write about that?" finds what was just said.
+    const out = await ctx.ai.read({ operation: "diary_find", instructions: FIND_INSTRUCTIONS, text: `Question: ${ctx.text}\n\nEntries:\n${list}`, conversation: true });
     if (out === null) return;
     const ids = readIds(out);
     found = ids.map((id) => entries.find((e) => e.id === id)).filter((e): e is Entry => !!e);

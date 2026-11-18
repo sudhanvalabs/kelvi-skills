@@ -1,6 +1,6 @@
 {
   "name": "kelvi-skills",
-  "version": "0.9.1",
+  "version": "0.10.0",
   "description": "Kelvi skills: features for Kelvi, the personal AI assistant in Forge, built on a small toolkit.",
   "type": "module",
   "license": "Apache-2.0",

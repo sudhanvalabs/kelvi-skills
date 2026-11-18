@@ -28,6 +28,8 @@ export function bench(
     liveWeb?: boolean;
     heard?: { language: string; original: string } | null;
     docs?: import("../src/kit").SkillDocument[];
+    // The conversation just before, as Kelvi gives it (kit 0.10.0).
+    recent?: string;
   } = {},
 ): Bench {
   const registers = new Map<string, SkillRecord[]>();
@@ -83,7 +85,8 @@ export function bench(
           listed = l.items.slice(0, 20).map((i) => i.id);
           out.push([`*${l.heading}* (${l.items.length})`, l.items.slice(0, 20).map((i, x) => `${x + 1}. ${i.line}`).join("\n"), `Add one: ${l.add.map((a) => `"${a}"`).join(", ")}.`, `Reply with numbers: ${l.verbs.map((v) => `"${v}"`).join(", ")}.`].join("\n\n"));
         },
-        ai: { read: async ({ operation, text: t }) => o.ai?.(operation, t) ?? null },
+        recent: o.recent ?? "",
+        ai: { read: async ({ operation, text: t, conversation }) => o.ai?.(operation, conversation && o.recent ? `${o.recent}\n\n${t}` : t) ?? null },
         registers: { open },
         documents: { recent: async (_m, opt) => (o.docs ?? []).filter((d) => opt?.transcripts || (d.kind ?? "document") === "document"), keep: async (d) => (d.kind === "transcript" || d.kind === "translation" ? `stored-${d.id}` : null), keepVoiceNote: async () => (o.heard ? "stored-voice" : null), remove: async (id) => {
             out.push(`[removed ${id}]`);

@@ -122,5 +122,9 @@ and sidebar entry, with no change to Forge's own files.
   read the rest with `ctx.ai.read`; when you still cannot tell what they want, call `ctx.clarify()`,
   which asks them one short question and reads their answer with the message. Never reply "I didn't
   follow that".
+- Messages often refer back ("it", "that one", "the one I just sent"). `ctx.recent` holds the last
+  few messages each way for the past hour; pass `conversation: true` to `ctx.ai.read` when the
+  reading may depend on them (a search, a follow-up), and leave it off when reading a document or a
+  recording, which stands on its own.
 - Never invent a fact. When the data does not answer, say so and say how to fix it.
 - Answer only your skill's messages. Kelvi is not an open chatbot.
