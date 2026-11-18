@@ -1,5 +1,5 @@
 import type { SkillContext, SkillDocument, SkillPicked } from "../../kit";
-import { asked, DIARY, DIARY_HELP, diaryCommand, diaryList, entryFrom, entryOf, entryText, FIND_INSTRUCTIONS, fallbackTitle, foundReply, matchEntries, readIds, readTitle, savedReply, TITLE_INSTRUCTIONS, type Entry } from "./logic";
+import { asked, sameWords, DIARY, DIARY_HELP, diaryCommand, diaryList, entryFrom, entryOf, entryText, FIND_INSTRUCTIONS, fallbackTitle, foundReply, matchEntries, readIds, readTitle, savedReply, TITLE_INSTRUCTIONS, type Entry } from "./logic";
 
 // Diary: reached by "diary: …", "diary" after a recording, "my diary", and the
 // sorting step for questions such as "when did I dream about Appaji?".
@@ -60,7 +60,7 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
   text = text.trim().replace(/^./u, (c) => c.toUpperCase());
   // The same recording kept again ("diary" twice, or sent again to add its audio):
   // the entry it already made is brought up to date, not copied.
-  const earlier = source === "Recording" ? (await reg.list()).find((r) => [r.data.entry, r.data.original].some((v) => typeof v === "string" && v.trim() === text)) : undefined;
+  const earlier = source === "Recording" ? (await reg.list()).find((r) => [r.data.entry, r.data.original].some((v) => typeof v === "string" && sameWords(v, text))) : undefined;
   // The recording itself, kept in the person's stored documents (folder Diary).
   const keepAs = { folder: "Diary", subfolder: null, title: fallbackTitle(text), kind: "Recording", date: ctx.person.today };
   const keepAudio = () => (source === "Voice note" ? ctx.documents.keepVoiceNote(keepAs) : doc && source === "Recording" ? ctx.documents.keep(doc, keepAs) : Promise.resolve(null));
@@ -104,10 +104,12 @@ async function write(ctx: SkillContext, reg: Awaited<ReturnType<SkillContext["re
   return ctx.reply(savedReply(entry));
 }
 
-// The latest thing to keep: a transcript or its translation before a document.
+// The latest thing to keep: a recording's transcript, in the language it was told
+// (the entry is kept in English with it, and the recording found through it), before
+// Kelvi's translation of it, before a document.
 function latest(docs: SkillDocument[]): SkillDocument | null {
   const withText = docs.filter((d) => d.text.trim());
-  return withText.find((d) => d.kind === "translation") ?? withText.find((d) => d.kind === "transcript") ?? withText[0] ?? null;
+  return withText.find((d) => d.kind === "transcript") ?? withText.find((d) => d.kind === "translation") ?? withText[0] ?? null;
 }
 
 // A reply by number to "my diary" (kit 0.5.0): show, play, rename or delete the

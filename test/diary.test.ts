@@ -116,3 +116,24 @@ test("after my diary, entries are picked by number", async () => {
   assert.match((await b.pick("delete", [2], null, "diary")).join("\n"), /Deleted \*The interview/);
   assert.equal(b.registers.get("skill_diary")!.length, 1);
 });
+
+test("store the audio file is keeping the recording; the same recording kept again is one entry", async () => {
+  for (const t of ["store audio file", "Store the audio file", "keep the original recording too", "save the audio in my diary", "add the recording to the entry"]) assert.deepEqual(diaryCommand(t), { kind: "file" }, t);
+  const { sameWords } = await import("../src/skills/diary/logic");
+  assert.ok(sameWords("ఐటీఎస్ అ బిగ్ హాల్ ఒకే అండ్ అక్కడ పీపుల్ ఆర్ అసెంబుల్డ్ దేర్ అండ్ అప్పాజీ వాస్ దేర్", "ఐటీఎస్ అ బిగ్ హాల్, ఒకే, అండ్ అక్కడ పీపుల్ ఆర్ అసెంబుల్డ్ దేర్ అండ్ అప్పాజీ వాస్ దేర్!"));
+  assert.ok(!sameWords("The interview went well", "The interview went badly today"));
+  const { bench } = await import("../bench/bench");
+  const sent = new Date().toISOString();
+  const docs = [
+    { id: "tr", filename: "Transcript, in English", text: "It's a big hall", sentAt: sent, storedId: "text-doc", kind: "translation" as const },
+    { id: "t1", filename: "Transcript", text: "ఐటీఎస్ అ బిగ్ హాల్ ఒకే అండ్ అక్కడ పీపుల్ ఆర్ అసెంబుల్డ్ దేర్", sentAt: sent, storedId: null, kind: "transcript" as const },
+  ];
+  const ai = () => JSON.stringify({ title: "Appaji dream", language: "Telugu", english: "It's a big hall" });
+  const b = bench({ docs, ai, today: "2026-11-18" });
+  await b.send("diary", "diary");
+  const e = b.registers.get("skill_diary")![0].data;
+  assert.equal(e.original, docs[1].text, "the Telugu kept as the original");
+  assert.equal(e.audio, "stored-t1", "the recording kept through the transcript, not the stored translation");
+  assert.match((await b.send("store the audio file", "diary"))[0], /already in your diary/);
+  assert.equal(b.registers.get("skill_diary")!.length, 1);
+});

@@ -67,6 +67,9 @@ export function diaryCommand(text: string): DiaryCommand | null {
   if (write && write[1].trim().length > 1) return { kind: "write", text: write[1].trim() };
   // "diary", "store in diary", "put it in my diary": the latest recording or text sent.
   if (/^(?:dear\s+)?diary$|^(?:store|save|put|add|keep|file|write)\s+(?:it\s+|this\s+|that\s+)?(?:in|to|into)\s+(?:my\s+|the\s+)?diary$|^diary (?:it|this|that)$|^(?:to|for) (?:my\s+)?diary$/.test(t)) return { kind: "file" };
+  // "store the audio file", "keep the original recording too", "save the audio in my
+  // diary" (PE, 18 November 2026): the recording kept with its entry.
+  if (/^(?:please\s+)?(?:store|save|keep|add|attach|put|file)\s+(?:the\s+|my\s+|its\s+|this\s+)?(?:original\s+)?(?:audio(?:\s+files?)?|recordings?|voice\s*notes?|sound|mp3)(?:\s+files?)?(?:\s+(?:too|also|as well))?(?:\s+(?:in|to|into|with)\s+(?:my\s+|the\s+)?(?:diary|entry|diary entry))?(?:\s+(?:too|also|as well))?$/.test(t)) return { kind: "file" };
   const list =
     t.match(/^(?:my|show(?: me)?(?: my| the)?|read(?: me)?(?: my| the)?|open(?: my| the)?|list(?: my| the)?|see(?: my| the)?|view(?: my| the)?)\s+(?:diary|diaries|journal)(?:\s+entries)?(?:\s+(?:for|from|of)?\s*(.+))?$/) ??
     t.match(/^(?:my\s+)?diary\s+(?:entries|list)()$/);
@@ -263,3 +266,16 @@ export const DIARY_HELP = [
 
   '• Find it again: "when did I dream about Appaji?", "what did I write about the interview?", "my diary", "my diary last week".',
 ].join("\n");
+
+// Whether two texts are the same recording's words: the same once letters alone are
+// compared, or one starting the other, so a transcript made again matches the entry
+// made from it the first time.
+export function sameWords(a: string, b: string): boolean {
+  const k = (s: string) => s.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, "");
+  const x = k(a);
+  const y = k(b);
+  if (!x || !y) return false;
+  if (x === y) return true;
+  const n = Math.min(160, x.length, y.length);
+  return n >= 40 && x.slice(0, n) === y.slice(0, n);
+}
