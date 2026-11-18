@@ -8,10 +8,13 @@
 // Each message after the skill's key is sent in turn, with the same registers, as
 // one person writing to Kelvi.
 import { SKILLS } from "../src/index";
-import type { RegisterDef, SkillContext, SkillRecord, SkillRegister } from "../src/kit";
+import type { PickVerb, RegisterDef, SkillContext, SkillRecord, SkillRegister } from "../src/kit";
 
 export interface Bench {
   send(text: string, key?: string): Promise<string[]>;
+  // A reply by number to the skill's last list ("play 2" is pick("play", [2])), as
+  // Forge passes it on (kit 0.5.0).
+  pick(verb: PickVerb, numbers: number[], target?: string | null, key?: string): Promise<string[]>;
   registers: Map<string, SkillRecord[]>;
   actions: { what: string; due: string }[];
 }
@@ -51,10 +54,18 @@ export function bench(
       },
     };
   };
-  return {
+  let listed: string[] = [];
+  const b: Bench = {
     registers,
     actions,
-    send: async (text, key) => {
+    pick: async (verb, numbers, target = null, key) => {
+      const ids = numbers.map((x) => listed[x - 1]).filter((x): x is string => !!x);
+      return run(`(${verb} ${numbers.join(", ")}${target ? ` to ${target}` : ""})`, key, { verb, ids, target });
+    },
+    send: async (text, key) => run(text, key, null),
+  };
+  const run = async (text: string, key: string | undefined, picked: SkillContext["picked"]): Promise<string[]> => {
+    {
       const out: string[] = [];
       // The skill named, else the one whose fixed words the message is, else the first.
       const skill = SKILLS.find((s) => s.key === key) ?? SKILLS.find((s) => s.matches(text)) ?? SKILLS[0];
@@ -62,8 +73,13 @@ export function bench(
         text,
         person: { userId: "bench-user", orgId: "bench-org", firstName: "Priya", today: o.today ?? new Date().toISOString().slice(0, 10), now: o.now ?? "21:30", timezone: "Asia/Kolkata" },
         heard: o.heard ?? null,
+        picked,
         reply: async (t) => {
           out.push(t);
+        },
+        replyList: async (l) => {
+          listed = l.items.slice(0, 20).map((i) => i.id);
+          out.push([`*${l.heading}* (${l.items.length})`, l.items.slice(0, 20).map((i, x) => `${x + 1}. ${i.line}`).join("\n"), `Add one: ${l.add.map((a) => `"${a}"`).join(", ")}.`, `Reply with numbers: ${l.verbs.map((v) => `"${v}"`).join(", ")}.`].join("\n\n"));
         },
         ai: { read: async ({ operation, text: t }) => o.ai?.(operation, t) ?? null },
         registers: { open },
@@ -85,8 +101,9 @@ export function bench(
       };
       await skill.handle(ctx);
       return out;
-    },
+    }
   };
+  return b;
 }
 
 // From the command line.

@@ -235,12 +235,25 @@ export function foundReply(found: Entry[], query: string): string {
 
 export const PERIOD_LABEL: Record<Period, string> = { today: " for today", yesterday: " for yesterday", week: " this week", last_week: " last week", month: " this month", last_month: " last month", all: "" };
 
-export function listReply(entries: Entry[], period: Period, today: string): string {
+// "my diary": the entries of the period, newest first, for Kelvi's numbered list
+// (kit 0.5.0 replyList), or the reply when there are none.
+export function diaryList(entries: Entry[], period: Period, today: string): { heading: string; items: { id: string; line: string }[]; add: string[]; verbs: string[] } | { text: string } {
+  if (!entries.length) return { text: DIARY_HELP };
   const shown = entries.filter((e) => inPeriod(e.writtenOn, period, today)).sort((a, b) => b.writtenOn.localeCompare(a.writtenOn) || b.at.localeCompare(a.at));
-  if (!entries.length) return DIARY_HELP;
-  if (!shown.length) return `Nothing in your diary${PERIOD_LABEL[period]}. "my diary" lists every entry.`;
-  const lines = shown.slice(0, 20).map((e, i) => `${i + 1}. *${e.title}*${e.audio ? " 🎙" : ""}, ${longDate(e.writtenOn)}`);
-  return [`*Your diary${PERIOD_LABEL[period]}* (${shown.length})`, `${lines.join("\n")}${shown.length > 20 ? `\n…and ${shown.length - 20} more on the website, under Diary.` : ""}`, `Ask about any of them: "what did I write about the interview?"${shown.some((e) => e.audio) ? `. 🎙 ones you can hear again: "play the ${shown.find((e) => e.audio)!.title}".` : ""}`].join("\n\n");
+  if (!shown.length) return { text: `Nothing in your diary${PERIOD_LABEL[period]}. "my diary" lists every entry.` };
+  return {
+    heading: `Your diary${PERIOD_LABEL[period]}`,
+    items: shown.map((e) => ({ id: e.id, line: `*${e.title}*${e.audio ? " 🎙" : ""}, ${longDate(e.writtenOn)}` })),
+    add: ["diary: last night I dreamt about Appaji", 'a voice note starting "diary"', 'forward a recording, then "diary"'],
+    verbs: shown.some((e) => e.audio) ? ["show 2", "play 2", "rename 2 to …", "delete 2"] : ["show 2", "rename 2 to …", "delete 2"],
+  };
+}
+
+// The list as plain text, for the bench and for tests.
+export function listReply(entries: Entry[], period: Period, today: string): string {
+  const l = diaryList(entries, period, today);
+  if ("text" in l) return l.text;
+  return [`*${l.heading}* (${l.items.length})`, l.items.slice(0, 20).map((i, x) => `${x + 1}. ${i.line}`).join("\n"), `Add one: ${l.add.map((a) => `"${a}"`).join(", ")}.`, `Reply with numbers: ${l.verbs.map((v) => `"${v}"`).join(", ")}.`].join("\n\n");
 }
 
 export const DIARY_HELP = [

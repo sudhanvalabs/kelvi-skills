@@ -99,3 +99,20 @@ test("a recording kept in the diary keeps its audio, once, and plays", async () 
   const played = await b.send("play the Appaji dream", "diary");
   assert.match(played.join("\n"), /\[file stored-t1: 🎙 Appaji dream\]/);
 });
+
+test("after my diary, entries are picked by number", async () => {
+  const { bench } = await import("../bench/bench");
+  const doc = { id: "t1", filename: "Transcript", text: "ఐటీఎస్ అ బిగ్ హాల్", sentAt: new Date().toISOString(), storedId: null, kind: "transcript" as const };
+  const ai = (op: string, t: string) => (op !== "diary_title" ? "[]" : /interview/i.test(t) ? JSON.stringify({ title: "The interview", language: "English", english: t }) : JSON.stringify({ title: "Appaji dream", language: "Telugu", english: "It's a big hall" }));
+  const b = bench({ docs: [doc], ai, today: "2026-11-18" });
+  await b.send("diary", "diary");
+  await b.send("diary: the interview went well", "diary");
+  const list = (await b.send("my diary", "diary")).join("\n");
+  assert.match(list, /Reply with numbers: "show 2", "play 2"/);
+  // Both written the same minute, so in the order kept: the recording is 1.
+  assert.match((await b.pick("play", [1], null, "diary")).join("\n"), /\[file stored-t1: 🎙 Appaji dream\]/);
+  assert.match((await b.pick("play", [2], null, "diary")).join("\n"), /don't have a recording/);
+  assert.match((await b.pick("rename", [1], "Dream of Appaji", "diary")).join("\n"), /Renamed to \*Dream of Appaji\*/);
+  assert.match((await b.pick("delete", [2], null, "diary")).join("\n"), /Deleted \*The interview/);
+  assert.equal(b.registers.get("skill_diary")!.length, 1);
+});

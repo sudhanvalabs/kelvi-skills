@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.4.0";
+export const KIT_VERSION = "0.5.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -54,15 +54,36 @@ export interface SkillDocument {
   kind?: "document" | "transcript" | "translation";
 }
 
+// Since 0.5.0: what a reply by number asked for, after the skill's own numbered
+// list (replyList): "show 2", "1 and 3 done", "delete 2", "play 2", "rename 1 to
+// Travel", "move 3 to Friday", "send 2 to Raghu". Forge reads the numbers, typed or
+// spoken, and gives the skill the ids of the entries they stand for, in order. A
+// delete has already been confirmed by the person.
+export type PickVerb = "show" | "done" | "delete" | "rename" | "move" | "send" | "play";
+export interface SkillPicked {
+  verb: PickVerb;
+  ids: string[];
+  // What followed "to": a new name, a date, a folder or a person.
+  target: string | null;
+}
+
 export interface SkillContext {
   // The message, or the document's caption.
   text: string;
+  // Since 0.5.0: set when the message picked entries by number from this skill's
+  // latest list; the skill acts on them and does not read `text`.
+  picked?: SkillPicked | null;
   // `now` (since 0.3.0) is the person's local time, HH:MM.
   person: { userId: string; orgId: string; firstName: string; today: string; now: string; timezone: string };
   // Since 0.3.0: when the message was a voice note in another language, what Kelvi
   // heard in it, before the translation into English that `text` holds.
   heard?: { language: string; original: string } | null;
   reply(text: string): Promise<void>;
+  // Since 0.5.0: a numbered list in Kelvi's shared shape (a heading with the count,
+  // the entries, the ways to add one, and what can be done by number), sent so that
+  // a reply by number comes back as `picked`. `verbs` are examples such as "show 2",
+  // "play 2", "delete 2"; `add` the phrasings that add an entry.
+  replyList(o: { heading: string; items: { id: string; line: string }[]; add: string[]; verbs: string[] }): Promise<void>;
   // One model call that reads text into JSON: masked before the model (and the
   // masked values put back in the answer), billed and logged as `operation`. Null
   // when it could not run (no credits, or the call failed); the person has then
