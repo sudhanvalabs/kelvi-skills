@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.6.0";
+export const KIT_VERSION = "0.7.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -80,6 +80,10 @@ export interface SkillContext {
   // heard in it, before the translation into English that `text` holds.
   heard?: { language: string; original: string } | null;
   reply(text: string): Promise<void>;
+  // Since 0.7.0: when the skill cannot tell what the message wants, Kelvi asks the
+  // person one short question back, in their words, and reads their answer together
+  // with this message (PE, 18 November 2026: ask, never "I didn't follow that").
+  clarify(): Promise<void>;
   // Since 0.5.0: a numbered list in Kelvi's shared shape (a heading with the count,
   // the entries, the ways to add one, and what can be done by number), sent so that
   // a reply by number comes back as `picked`. `verbs` are examples such as "show 2",

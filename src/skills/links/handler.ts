@@ -9,7 +9,8 @@ export async function handle(ctx: SkillContext): Promise<void> {
   if (ctx.picked) return picked(ctx, reg, links, ctx.picked);
   const cmd = linksCommand(ctx.text);
 
-  if (!cmd || cmd.kind === "help") return ctx.reply(LINKS_HELP);
+  if (!cmd) return ctx.clarify();
+  if (cmd.kind === "help") return ctx.reply(LINKS_HELP);
   if (cmd.kind === "list") {
     const l = linksList(links, cmd.about);
     return "text" in l ? ctx.reply(l.text) : ctx.replyList(l);

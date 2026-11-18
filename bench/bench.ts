@@ -77,6 +77,7 @@ export function bench(
         reply: async (t) => {
           out.push(t);
         },
+        clarify: async () => void out.push("(Kelvi asks a question back)"),
         replyList: async (l) => {
           listed = l.items.slice(0, 20).map((i) => i.id);
           out.push([`*${l.heading}* (${l.items.length})`, l.items.slice(0, 20).map((i, x) => `${x + 1}. ${i.line}`).join("\n"), `Add one: ${l.add.map((a) => `"${a}"`).join(", ")}.`, `Reply with numbers: ${l.verbs.map((v) => `"${v}"`).join(", ")}.`].join("\n\n"));

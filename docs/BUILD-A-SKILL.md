@@ -115,6 +115,12 @@ and sidebar entry, with no change to Forge's own files.
 
 - Plain sentences, short enough for a phone. *Single asterisks* for the few words that matter; no
   tables, headings or emoji.
-- Number any list the person might answer by number.
+- Send any list the person might answer by number with `ctx.replyList`, which numbers it in Kelvi's
+  shared shape (the ways to add one, what can be done by number); a reply by number comes back as
+  `ctx.picked`.
+- People write in their own words and languages. Match the common phrasings without the model, then
+  read the rest with `ctx.ai.read`; when you still cannot tell what they want, call `ctx.clarify()`,
+  which asks them one short question and reads their answer with the message. Never reply "I didn't
+  follow that".
 - Never invent a fact. When the data does not answer, say so and say how to fix it.
 - Answer only your skill's messages. Kelvi is not an open chatbot.
