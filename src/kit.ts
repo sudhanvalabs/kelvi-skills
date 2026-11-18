@@ -13,7 +13,7 @@
 
 // The version of the toolkit's contract. Forge refuses a skill built for another
 // major version.
-export const KIT_VERSION = "0.5.0";
+export const KIT_VERSION = "0.6.0";
 
 // A record in one of the skill's registers.
 export interface SkillRecord {
@@ -59,7 +59,8 @@ export interface SkillDocument {
 // Travel", "move 3 to Friday", "send 2 to Raghu". Forge reads the numbers, typed or
 // spoken, and gives the skill the ids of the entries they stand for, in order. A
 // delete has already been confirmed by the person.
-export type PickVerb = "show" | "done" | "delete" | "rename" | "move" | "send" | "play";
+// Since 0.6.0, "cancel" too: "cancel 2" (a subscription the person has cancelled).
+export type PickVerb = "show" | "done" | "delete" | "rename" | "move" | "send" | "play" | "cancel";
 export interface SkillPicked {
   verb: PickVerb;
   ids: string[];

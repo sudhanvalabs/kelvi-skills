@@ -73,10 +73,22 @@ test("on the bench: save, list, find, rename, delete", async () => {
   assert.match((await b.send("meet.google.com/abc-defg-hij"))[0], /^Already saved as \*Google meet\*/);
   const list = (await b.send("my links"))[0];
   assert.match(list, /^\*Your links\* \(3\)/);
-  assert.match(list, /\n1\. \*example\.org\*\nhttps:\/\/example\.org\/page\n\n2\. \*Kelvi is live\*/, "newest first");
+  assert.match(list, /\n1\. \*example\.org\*\nhttps:\/\/example\.org\/page\n2\. \*Kelvi is live\*/, "newest first");
+  assert.match(list, /Reply with numbers: "show 2", "rename 2 to …", "delete 2"\./);
   assert.equal((await b.send("send me my meet link"))[0], "*Google meet*\nhttps://meet.google.com/abc-defg-hij");
   assert.match((await b.send("rename 1 to Example site"))[0], /^Renamed \*example\.org\* to \*Example site\*/);
   assert.match((await b.send("delete the example site link"))[0], /^Deleted \*Example site\*/);
   assert.equal(b.registers.get("skill_links")?.length, 2);
   assert.match((await b.send("send me the budget link"))[0], /couldn't find/);
+});
+
+test("after my links, links are picked by number", async () => {
+  const b = bench({ today: "2026-11-17" });
+  await b.send("my meet link: meet.google.com/abc-defg-hij", "links");
+  await b.send("my drive link: drive.google.com/x", "links");
+  await b.send("my links", "links");
+  assert.equal((await b.pick("show", [2], null, "links"))[0], "*Meet*\nhttps://meet.google.com/abc-defg-hij");
+  assert.match((await b.pick("rename", [1], "Team drive", "links"))[0], /^Renamed \*Drive\* to \*Team drive\*/);
+  assert.match((await b.pick("delete", [2], null, "links"))[0], /^Deleted \*Meet\*/);
+  assert.equal(b.registers.get("skill_links")?.length, 1);
 });

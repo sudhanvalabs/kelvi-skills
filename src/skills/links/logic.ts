@@ -157,6 +157,21 @@ export const ordered = (links: Link[]) => [...links].sort((a, b) => b.addedAt.lo
 
 // ─── Replies ─────────────────────────────────────────────────────────────────
 
+// "my links", newest first, for Kelvi's numbered list (kit 0.5.0 replyList), or the
+// reply when there are none.
+export function linksList(links: Link[], about: string | null): { heading: string; items: { id: string; line: string }[]; add: string[]; verbs: string[] } | { text: string } {
+  const all = ordered(links);
+  const shown = about ? all.filter((l) => match([l], about).length) : all;
+  if (!links.length) return { text: 'No links yet. Send me a link, with a name if you like, such as "my Meet link: meet.google.com/abc-defg-hij".' };
+  if (!shown.length) return { text: `No saved links about ${about}. "my links" lists them all.` };
+  return {
+    heading: about ? `Your links about ${about}` : "Your links",
+    items: shown.map((l) => ({ id: l.id, line: `*${l.name}*\n${l.url}` })),
+    add: ["my Meet link: meet.google.com/abc-defg-hij", "send any link"],
+    verbs: ["show 2", "rename 2 to …", "delete 2"],
+  };
+}
+
 export function listReply(links: Link[], about: string | null): string {
   const all = ordered(links);
   const shown = about ? all.filter((l) => match([l], about).length) : all;
@@ -178,5 +193,5 @@ export const LINKS_HELP = [
   "*Links*",
   '• Save: send a link, with a name if you like: "my Meet link: meet.google.com/abc-defg-hij". With no name, I use the page\'s title.',
   '• Get one back: "send me my Meet link", "the Kelvi post link".',
-  '• "my links" lists them; "my links about AI" only those. "rename 3 to Team standup", "delete the Zoom link".',
+  '• "my links" lists them, numbered; "my links about AI" only those. Then "show 2", "rename 2 to Team standup", "delete 2". By name: "delete the Zoom link".',
 ].join("\n");
